@@ -1,16 +1,30 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   createColumnHelper,
   useReactTable,
   flexRender,
   getCoreRowModel,
+  RowData,
+  ColumnDef,
 } from "@tanstack/react-table";
+import DefaultCell from "@/client/EditableTable/DefaultCell";
 
 type Person = {
   firstName: string;
   lastName: string;
+};
+
+// From editable model example
+declare module "@tanstack/react-table" {
+  interface TableMeta<TData extends RowData> {
+    updateData: (rowIndex: number, columnId: string, value: unknown) => void;
+  }
+}
+
+const defaultColumn: Partial<ColumnDef<Person>> = {
+  cell: DefaultCell,
 };
 
 const defaultData: Person[] = [
@@ -26,25 +40,46 @@ const defaultData: Person[] = [
 
 const columnHelper = createColumnHelper<Person>();
 
-const columns = [
-  columnHelper.accessor("firstName", {
-    header: () => <span>First Name</span>,
-    cell: (info) => info.getValue(),
-  }),
-  columnHelper.accessor((row) => row.lastName, {
-    id: "lastName",
-    cell: (info) => <i>{info.getValue()}</i>,
-    header: () => <span>Last Name</span>,
-  }),
-];
-
-export default function SimpleTable() {
+export default function EditableTable() {
   const [data, setData] = useState(() => [...defaultData]);
+
+  const columns = useMemo<ColumnDef<Person>[]>(
+    () => [
+      {
+        header: "Label",
+        // Don't need a cell renderer as we have the default one
+      },
+      {
+        header: "Area",
+      },
+      {
+        header: "Depth",
+      },
+    ],
+    []
+  );
 
   const table = useReactTable({
     data,
     columns,
+    defaultColumn,
     getCoreRowModel: getCoreRowModel(),
+    meta: {
+      updateData: (rowIndex, columnId, value) => {
+        console.log("updating data");
+        setData((old) =>
+          old.map((row, index) => {
+            if (index === rowIndex) {
+              return {
+                ...old[rowIndex]!,
+                [columnId]: value,
+              };
+            }
+            return row;
+          })
+        );
+      },
+    },
   });
   return (
     <div>
